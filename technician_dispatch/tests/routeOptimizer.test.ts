@@ -94,6 +94,29 @@ describe('RouteOptimizer — calculateRouteDistance', () => {
     it('works correctly when boxes array is empty and routeIds is also empty', () => {
         expect(opt.calculateRouteDistance(ORIGIN_TECH, [], [])).toBeCloseTo(0, 5);
     });
+
+    it('handles zero-distance legs when boxes share the same location', () => {
+        const boxes: Box[] = [
+            { id: 'near1', name: 'Near 1', location: { latitude: 0, longitude: 0 } },
+            { id: 'near2', name: 'Near 2', location: { latitude: 0, longitude: 0 } },
+        ];
+
+        const dist = opt.calculateRouteDistance(
+            { ...ORIGIN_TECH, startLocation: { latitude: 0, longitude: 0 } },
+            boxes,
+            ['near1', 'near2'],
+        )!;
+
+        expect(dist).toBeCloseTo(0, 5);
+    });
+
+    it('handles routes that revisit the same box ID and does not charge distance for each visit', () => {
+        const distSingle = opt.calculateRouteDistance(ORIGIN_TECH, SQUARE_BOXES, ['b1'])!;
+        const distDouble = opt.calculateRouteDistance(ORIGIN_TECH, SQUARE_BOXES, ['b1', 'b1'])!;
+
+        expect(distSingle).toBeGreaterThan(0);
+        expect(distDouble).toBeCloseTo(distSingle, 5);
+    });
 });
 
 // ─── findShortestRoute ───────────────────────────────────────────────────────
@@ -210,4 +233,16 @@ describe('RouteOptimizer — findShortestRoute', () => {
         expect(new Set(result.route).size).toBe(3);
     });
 
+    it('handles a layout with multiple equally optimal routes by returning a deterministic route', () => {
+        const boxes: Box[] = [
+            { id: 'E', name: 'East', location: { latitude: 0, longitude: 1 } },
+            { id: 'W', name: 'West', location: { latitude: 0, longitude: -1 } },
+        ];
+
+        const result = opt.findShortestRoute(ORIGIN_TECH, boxes);
+
+        // Both E→W and W→E have the same total distance from the origin,
+        // but the greedy algorithm should deterministically pick E then W.
+        expect(result.route).toEqual(['E', 'W']);
+    });
 });

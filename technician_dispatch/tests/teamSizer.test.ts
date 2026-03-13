@@ -66,6 +66,18 @@ describe('TeamSizer — calculateAssignmentDuration', () => {
     it('returns null when routeIds is non-empty but boxes array is empty', () => {
         expect(sizer.calculateAssignmentDuration(START, SPEED, [], ['A'])).toBeNull();
     });
+
+    it('boxes at the start location contribute only fix time', () => {
+        const atStart: Box = {
+            id: 'AT_START',
+            name: 'At start',
+            location: { ...START },
+            fixTimeMinutes: 90,
+        };
+
+        const dur = sizer.calculateAssignmentDuration(START, SPEED, [atStart], ['AT_START'])!;
+        expect(dur).toBeCloseTo(90, 5);
+    });
 });
 
 // ─── tryAssign ───────────────────────────────────────────────────────────────
@@ -155,6 +167,21 @@ describe('TeamSizer — tryAssign', () => {
         expect(r).not.toBeNull();
         const all = r!.flatMap(a => a.assignedBoxIds).sort();
         expect(all).toEqual(['b0', 'b1', 'b2', 'b3']);
+    });
+
+    it('can produce valid but unbalanced workloads when it is still feasible', () => {
+        const boxes = [
+            eastBox('HEAVY', 0.1, 300),
+            eastBox('LIGHT1', 0.2, 60),
+            eastBox('LIGHT2', 0.3, 60),
+        ];
+
+        const r = sizer.tryAssign(START, SPEED, boxes, 2, 480)!;
+        expect(r).not.toBeNull();
+        expect(r.flatMap(a => a.assignedBoxIds).sort()).toEqual(
+            ['HEAVY', 'LIGHT1', 'LIGHT2'].sort(),
+        );
+        r.forEach(a => expect(a.totalTimeMinutes).toBeLessThanOrEqual(480 + 0.01));
     });
 });
 
@@ -274,4 +301,12 @@ describe('TeamSizer — findMinimumTeamSize', () => {
         expect(new Set(labels).size).toBe(labels.length);
     });
 
+    it('looser deadlines never require more technicians than tighter deadlines', () => {
+        const boxes = Array.from({ length: 6 }, (_, i) => eastBox(`b${i}`, i * 0.05, 80));
+
+        const tight = sizer.findMinimumTeamSize(START, SPEED, boxes, 240);
+        const loose = sizer.findMinimumTeamSize(START, SPEED, boxes, 480);
+
+        expect(loose.techniciansNeeded).toBeLessThanOrEqual(tight.techniciansNeeded);
+    });
 });

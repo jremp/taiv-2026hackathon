@@ -88,6 +88,27 @@ describe('DayPlanner — calculateRouteDuration', () => {
     it('returns null when routeIds is non-empty but boxes array is empty', () => {
         expect(planner.calculateRouteDuration(BASE_TECH, [], ['A'])).toBeNull();
     });
+
+    it('boxes at the technician start location contribute only fix time', () => {
+        const boxAtStart: Box = {
+            id: 'AT_START',
+            name: 'At start',
+            location: { ...BASE_TECH.startLocation },
+            fixTimeMinutes: 120,
+        };
+
+        const dur = planner.calculateRouteDuration(BASE_TECH, [boxAtStart], ['AT_START'])!;
+        expect(dur).toBeCloseTo(120, 5);
+    });
+
+    it('boxes with zero fix time contribute only travel time', () => {
+        const travelOnly = eastBox('TRAVEL_ONLY', 0.1, 0);
+        const dur = planner.calculateRouteDuration(BASE_TECH, [travelOnly], ['TRAVEL_ONLY'])!;
+
+        // 0.1° ≈ 11.1 minutes of travel at 60 km/h; with 0 fix time.
+        expect(dur).toBeGreaterThan(10);
+        expect(dur).toBeLessThan(15);
+    });
 });
 
 // ─── planDay ─────────────────────────────────────────────────────────────────
@@ -120,6 +141,21 @@ describe('DayPlanner — planDay', () => {
         expect(r.boxesFixed).toBe(1);
         expect(r.plannedRoute).toContain('A');
         expect(r.totalTimeUsedMinutes).toBeLessThanOrEqual(480);
+    });
+
+    it('accepts plans that exactly fill the workingMinutes budget', () => {
+        const exactTech: Technician = {
+            ...BASE_TECH,
+            workingMinutes: 480,
+        };
+
+        const box = eastBox('FULL_DAY', 0, 480); // at start location, 480 min fix time
+        const r   = planner.planDay(exactTech, [box]);
+
+        expect(r.plannedRoute).toEqual(['FULL_DAY']);
+        expect(r.totalTimeUsedMinutes).toBeCloseTo(480, 5);
+        expect(r.boxesFixed).toBe(1);
+        expect(r.skippedBoxIds).toHaveLength(0);
     });
 
     it('fixes all boxes when they all fit with budget to spare', () => {
