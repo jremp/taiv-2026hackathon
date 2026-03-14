@@ -1,36 +1,65 @@
 export interface User {
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-    address: string;
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
 }
 
 export class UserManager {
 
-    addUser(user: User): void {
-    }
+  private users: Map<string, User> = new Map();
 
-    removeUser(id: string): void {
+  addUser(user: User): void {
+    if (!user.id) {
+      throw new Error('User must have an id');
+    } else if (this.users.has(user.id)) {
+      throw new Error('User with id ' + user.id + ' already exists')
     }
+    this.users.set(user.id, user);
+  }
 
-    getUser(id: string): User | null {
-      return null;
+  removeUser(id: string): void {
+    const user: User | null = this.users.get(id) || null;
+    if (!user) {
+      throw new Error('User with id ' + id + ' not found');
+    } else {
+      this.users.delete(user.id);
     }
+  }
 
-    getUsersByEmail(email: string): User[] | null {
-      return null;
-    }
+  getUser(id: string): User | null {
+    return this.users.get(id) || null;
+  }
 
-    getUsersByPhone(phone: string): User[] | null {
-      return null;
-    }
+  getUsersByEmail(email: string): User[] | null {
+    const matches: User[] = [];
 
-    getAllUsers(): User[] {
-        return [];
+    for (const user of this.users.values()) {
+      if (user.email === email) {
+        matches.push(user);
+      }
     }
+    return matches;
+  }
 
-    getUserCount(): number {
-        return 0;
+  getUsersByPhone(phone: string): User[] | null {
+    // TODO: Consider special phone formatting?
+    const matches: User[] = [];
+
+    for (const user of this.users.values()) {
+      if (user.phone === phone) {
+        matches.push(user);
+      }
     }
+    return matches;
+  }
+
+  getAllDevices(): User[] {
+    return [...this.users.values()];
+  }
+
+  getUserCount(): number {
+    return this.users.size;
+  }
 }
