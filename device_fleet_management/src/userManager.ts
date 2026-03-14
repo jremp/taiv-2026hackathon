@@ -55,7 +55,7 @@ export class UserManager {
     return matches;
   }
 
-  getAllDevices(): User[] {
+  getAllUsers(): User[] {
     return [...this.users.values()];
   }
 
