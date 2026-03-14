@@ -31,7 +31,7 @@ export class PlacementEngine {
     }
 
     isAdCompatibleWithArea(ad: Ad, area: Area): boolean {
-        return false;
+        return !ad.bannedLocations.includes(area.location);
     }
 
     getTotalScheduledTimeForArea(areaSchedule: ScheduledAd[]): number {
